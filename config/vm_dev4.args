@@ -1,5 +1,5 @@
 ## Name of the node
--name rclref1@192.168.0.63
+-name rclref4@192.168.0.63
 
 ## Cookie for distributed erlang
 -setcookie rclref-cookie

@@ -55,7 +55,7 @@ devrel-start:
 	for d in $(BASEDIR)/_build/dev*; do $$d/rel/rclref/bin/$(APPNAME) daemon; done
 
 devrel-join:
-	for d in $(BASEDIR)/_build/dev{2,3}; do $$d/rel/rclref/bin/$(APPNAME) eval 'riak_core:join("rclref1@127.0.0.1")'; done
+	for d in $(BASEDIR)/_build/dev{2,3}; do $$d/rel/rclref/bin/$(APPNAME) eval 'riak_core:join("rclref1@192.168.0.63")'; done
 
 devrel-cluster-plan:
 	$(BASEDIR)/_build/dev1/rel/rclref/bin/$(APPNAME) eval 'riak_core_claimant:plan()'
@@ -118,10 +118,10 @@ dev3-console:
 	$(BASEDIR)/_build/dev3/rel/rclref/bin/$(APPNAME) console
 
 dev2-join:
-	$(BASEDIR)/_build/dev2/rel/rclref/bin/$(APPNAME) eval 'riak_core:join("rclref1@127.0.0.1")'
+	$(BASEDIR)/_build/dev2/rel/rclref/bin/$(APPNAME) eval 'riak_core:join("rclref1@192.168.0.63")'
 
 dev3-join:
-	$(BASEDIR)/_build/dev3/rel/rclref/bin/$(APPNAME) eval 'riak_core:join("rclref1@127.0.0.1")'
+	$(BASEDIR)/_build/dev3/rel/rclref/bin/$(APPNAME) eval 'riak_core:join("rclref1@192.168.0.63")'
 
 dev1-leave:
 	$(BASEDIR)/_build/dev1/rel/rclref/bin/$(APPNAME) eval 'riak_core:leave()'
@@ -141,4 +141,5 @@ dev2-status:
 dev3-status:
 	$(BASEDIR)/_build/dev3/rel/rclref/bin/$(APPNAME) eval 'riak_core_console:member_status([])'
 
-
+devi-shell:
+	ERL_FLAGS=" -args_file config/vm_dev${I}.args" rebar3 shell --config config/sys_dev${I}.config

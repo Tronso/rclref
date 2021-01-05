@@ -1,0 +1,8 @@
+# rebar 3
+.rebar3
+_build/
+_checkouts/
+*.crashdump
+
+# riak core lite
+data/

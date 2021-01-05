@@ -62,7 +62,7 @@
 %%      </ul>
 -module(riak_core_coverage_fsm).
 
--include_lib("riak_core/include/riak_core_vnode.hrl").
+-include_lib("riak_core_lite/include/riak_core_vnode.hrl").
 
 -behaviour(gen_fsm_compat).
 
