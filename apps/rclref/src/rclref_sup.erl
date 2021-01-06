@@ -39,4 +39,11 @@ init(_Args) ->
          infinity,
          supervisor,
          [rclref_coverage_fsm_sup]},
-    {ok, {{one_for_one, 5, 10}, [VMaster, PutStatem, GetStatem, CoverageFsm]}}.
+    Stats =
+        {rclref_stats_sup,
+         {rclref_stats_sup, start_link, []},
+         permanent,
+         infinity,
+         supervisor,
+         [rclref_stats_sup]},
+    {ok, {{one_for_one, 5, 10}, [VMaster, PutStatem, GetStatem, CoverageFsm, Stats]}}.

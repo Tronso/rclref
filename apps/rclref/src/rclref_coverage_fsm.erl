@@ -20,11 +20,19 @@ start_link([ReqId, Client_Pid, _Client_Node, Request, Options]) ->
 % Client_Pid: Pid, Client_Node: Node
 init({pid, ReqId, Client_Pid}, [Request = {unique, _}, Timeout]) ->
     logger:info("Initializing CoverageFsm, Pid: ~p", [self()]),
-    State = #state{req_id = ReqId, client_pid = Client_Pid, request = Request, accum = []},
+    State =
+        #state{req_id = ReqId,
+               client_pid = Client_Pid,
+               request = Request,
+               accum = []},
     {Request, allup, ?N, 1, rclref, rclref_vnode_master, Timeout, State};
 init({pid, ReqId, Client_Pid}, [Request = {all, _}, Timeout]) ->
     logger:info("Initializing CoverageFsm, Pid: ~p", [self()]),
-    State = #state{req_id = ReqId, client_pid = Client_Pid, request = Request, accum = []},
+    State =
+        #state{req_id = ReqId,
+               client_pid = Client_Pid,
+               request = Request,
+               accum = []},
     {Request, allup, ?N, ?N, rclref, rclref_vnode_master, Timeout, State}.
 
 process_results({{_ReqId, {_Partition, _Node}}, []}, State) ->
@@ -37,27 +45,39 @@ process_results({{_ReqId, {_Partition, _Node}}, Data}, State = #state{accum = Ac
 
 finish(clean,
        State =
-           #state{req_id = ReqId, request = {unique, _}, client_pid = Client_Pid, accum = Accum}) ->
+           #state{req_id = ReqId,
+                  request = {unique, _},
+                  client_pid = Client_Pid,
+                  accum = Accum}) ->
     logger:info("Terminating CoverageFsm, Pid: ~p", [self()]),
     NewAccum = lists:usort(Accum),
     Client_Pid ! {ReqId, {ok, NewAccum}},
     {stop, normal, State};
 finish(clean,
        State =
-           #state{req_id = ReqId, request = {all, _}, client_pid = Client_Pid, accum = Accum}) ->
+           #state{req_id = ReqId,
+                  request = {all, _},
+                  client_pid = Client_Pid,
+                  accum = Accum}) ->
     logger:info("Terminating CoverageFsm, Pid: ~p", [self()]),
     Client_Pid ! {ReqId, {ok, Accum}},
     {stop, normal, State};
 finish({error, Reason},
        State =
-           #state{req_id = ReqId, request = {unique, _}, client_pid = Client_Pid, accum = Accum}) ->
+           #state{req_id = ReqId,
+                  request = {unique, _},
+                  client_pid = Client_Pid,
+                  accum = Accum}) ->
     logger:error("Coverage query failed! Reason: ~p", [Reason]),
     NewAccum = lists:usort(Accum),
     Client_Pid ! {ReqId, {partial, Reason, NewAccum}},
     {stop, normal, State};
 finish({error, Reason},
        State =
-           #state{req_id = ReqId, request = {all, _}, client_pid = Client_Pid, accum = Accum}) ->
+           #state{req_id = ReqId,
+                  request = {all, _},
+                  client_pid = Client_Pid,
+                  accum = Accum}) ->
     logger:error("Coverage query failed! Reason: ~p", [Reason]),
     Client_Pid ! {ReqId, {partial, Reason, Accum}},
     {stop, normal, State}.

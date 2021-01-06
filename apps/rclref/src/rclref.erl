@@ -1,6 +1,6 @@
 -module(rclref).
 
--compile({no_auto_import, [{put, 2}]}).
+-compile({no_auto_import, [put/2]}).
 
 -export([ping/0, put/1, put/2, get/1, get/2, delete/1, delete/2, reap_tombs/1,
          reap_tombs/2]).
@@ -8,7 +8,7 @@
          list_unique_objects/1]).
 -export([list_all_keys/0, list_all_keys/1, list_all_objects/0, list_all_objects/1]).
 
--ignore_xref([{ping, 0}]).
+-ignore_xref([ping/0]).
 
 -define(TIMEOUT_PUT, rclref_config:timeout_put()).
 -define(TIMEOUT_GET, rclref_config:timeout_get()).
@@ -87,10 +87,10 @@ reap_tombs(Key) ->
 reap_tombs(Key, Options) when is_list(Options) ->
     DocIdx = riak_core_util:chash_key({Key, undefined}),
     PrefList = riak_core_apl:get_primary_apl(DocIdx, ?N, rclref),
-    lists:foreach(fun ({IndexNode, _}) ->
-                          riak_core_vnode_master:command(IndexNode,
-                                                         {reap_tombs_request, Key},
-                                                         rclref_vnode_master)
+    lists:foreach(fun({IndexNode, _}) ->
+                     riak_core_vnode_master:command(IndexNode,
+                                                    {reap_tombs_request, Key},
+                                                    rclref_vnode_master)
                   end,
                   PrefList),
     ok.
@@ -142,8 +142,8 @@ coverage_request(Request, Options) ->
 -spec wait_for_reqid(non_neg_integer(), timeout()) -> {error, timeout} | any().
 wait_for_reqid(ReqId, Timeout) ->
     receive
-      {ReqId, Response} ->
-          Response
-      after Timeout ->
-                {error, timeout}
+        {ReqId, Response} ->
+            Response
+    after Timeout ->
+        {error, timeout}
     end.

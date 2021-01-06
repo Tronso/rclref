@@ -59,10 +59,10 @@ init([ReqId, ClientPid, ClientNode, Key, Options]) ->
                preflist = PrefList,
                n_val = N,
                r_val = R},
-    lists:foreach(fun ({IndexNode, _}) ->
-                          riak_core_vnode_master:command(IndexNode,
-                                                         {kv_get_request, Key, self()},
-                                                         rclref_vnode_master)
+    lists:foreach(fun({IndexNode, _}) ->
+                     riak_core_vnode_master:command(IndexNode,
+                                                    {kv_get_request, Key, self()},
+                                                    rclref_vnode_master)
                   end,
                   PrefList),
     {ok, waiting, State, [{state_timeout, TimeoutGet, hard_stop}]}.
@@ -93,39 +93,39 @@ waiting(cast,
                    undefined_objects = UObjs0}) ->
     % Update State
     case rclref_object:value(RObj) of
-      undefined ->
-          UObjs = [RObj] ++ UObjs0,
-          NumVnodeError = NumVnodeError0 + 1,
-          VnodeErrors =
-              [rclref_object:new_error(not_found,
-                                       rclref_object:partition(RObj),
-                                       rclref_object:node(RObj))]
+        undefined ->
+            UObjs = [RObj] ++ UObjs0,
+            NumVnodeError = NumVnodeError0 + 1,
+            VnodeErrors =
+                [rclref_object:new_error(not_found,
+                                         rclref_object:partition(RObj),
+                                         rclref_object:node(RObj))]
                 ++ VnodeErrors0,
-          NewState =
-              State#state{num_vnode_error = NumVnodeError,
-                          vnode_errors = VnodeErrors,
-                          undefined_objects = UObjs},
+            NewState =
+                State#state{num_vnode_error = NumVnodeError,
+                            vnode_errors = VnodeErrors,
+                            undefined_objects = UObjs},
 
-          % When more than (N-R) vnodes responded with {error, VnodeError}, return all RObjs and VNodeErrors it has received to client
-          case NumVnodeError > N - R of
-            true ->
-                ClientPid ! {ReqId, {{ok, RObjs0}, {error, VnodeErrors}}},
-                {next_state, finalize, NewState, [{state_timeout, ?TIMEOUT_REPAIR, hard_stop}]};
-            false ->
-                {keep_state, NewState}
-          end;
-      _ ->
-          NumOk = NumOk0 + 1,
-          RObjs = RObjs0 ++ [RObj],
-          NewState = State#state{num_ok = NumOk, riak_objects = RObjs},
-          % When more than or equal to R vnodes responded with {ok, RObj}, return ?R RObjs to client
-          case NumOk >= R of
-            true ->
-                ClientPid ! {ReqId, {ok, RObjs}},
-                {next_state, finalize, NewState, [{state_timeout, ?TIMEOUT_REPAIR, hard_stop}]};
-            false ->
-                {keep_state, NewState}
-          end
+            % When more than (N-R) vnodes responded with {error, VnodeError}, return all RObjs and VNodeErrors it has received to client
+            case NumVnodeError > N - R of
+                true ->
+                    ClientPid ! {ReqId, {{ok, RObjs0}, {error, VnodeErrors}}},
+                    {next_state, finalize, NewState, [{state_timeout, ?TIMEOUT_REPAIR, hard_stop}]};
+                false ->
+                    {keep_state, NewState}
+            end;
+        _ ->
+            NumOk = NumOk0 + 1,
+            RObjs = RObjs0 ++ [RObj],
+            NewState = State#state{num_ok = NumOk, riak_objects = RObjs},
+            % When more than or equal to R vnodes responded with {ok, RObj}, return ?R RObjs to client
+            case NumOk >= R of
+                true ->
+                    ClientPid ! {ReqId, {ok, RObjs}},
+                    {next_state, finalize, NewState, [{state_timeout, ?TIMEOUT_REPAIR, hard_stop}]};
+                false ->
+                    {keep_state, NewState}
+            end
     end;
 % When a vnode returns {error, VnodeError}
 waiting(cast,
@@ -145,11 +145,11 @@ waiting(cast,
 
     % When more than (N-R) vnodes responded with {error, VnodeError}, return all RObjs and VNodeErrors it has received to client
     case NumVnodeError > N - R of
-      true ->
-          ClientPid ! {ReqId, {{ok, RObjs0}, {error, VnodeErrors}}},
-          {next_state, finalize, NewState, [{state_timeout, ?TIMEOUT_REPAIR, hard_stop}]};
-      _ ->
-          {keep_state, NewState}
+        true ->
+            ClientPid ! {ReqId, {{ok, RObjs0}, {error, VnodeErrors}}},
+            {next_state, finalize, NewState, [{state_timeout, ?TIMEOUT_REPAIR, hard_stop}]};
+        _ ->
+            {keep_state, NewState}
     end;
 % When waiting timeouts, go to finalize state
 waiting(state_timeout,
@@ -172,16 +172,16 @@ finalize(cast,
                     undefined_objects = UObjs0}) ->
     % Update State
     case rclref_object:value(RObj) of
-      undefined ->
-          NumVnodeError = NumVnodeError0 + 1,
-          UObjs = UObjs0 ++ [RObj],
-          NumOk = NumOk0,
-          RObjs = RObjs0;
-      _ ->
-          NumVnodeError = NumVnodeError0,
-          UObjs = UObjs0,
-          NumOk = NumOk0 + 1,
-          RObjs = RObjs0 ++ [RObj]
+        undefined ->
+            NumVnodeError = NumVnodeError0 + 1,
+            UObjs = UObjs0 ++ [RObj],
+            NumOk = NumOk0,
+            RObjs = RObjs0;
+        _ ->
+            NumVnodeError = NumVnodeError0,
+            UObjs = UObjs0,
+            NumOk = NumOk0 + 1,
+            RObjs = RObjs0 ++ [RObj]
     end,
 
     NewState =
@@ -192,12 +192,12 @@ finalize(cast,
 
     % When all ?N vnodes has responded, do read_repair
     case NumOk + NumVnodeError >= N of
-      true ->
-          MergedRObj = rclref_object:merge(RObjs ++ UObjs),
-          ok = repair(MergedRObj, N, RObjs ++ UObjs),
-          {stop, normal, NewState};
-      false ->
-          {keep_state, NewState}
+        true ->
+            MergedRObj = rclref_object:merge(RObjs ++ UObjs),
+            ok = repair(MergedRObj, N, RObjs ++ UObjs),
+            {stop, normal, NewState};
+        false ->
+            {keep_state, NewState}
     end;
 % When a vnode returns {error, VnodeError}
 finalize(cast,
@@ -216,30 +216,33 @@ finalize(cast,
 
     % When all ?N vnodes has responded, do read_repair
     case NumOk0 + NumVnodeError >= N of
-      true ->
-          case RObjs0 ++ UObjs0 of
-            % When any of the vnodes responded with {ok, RObj}, do not issue read_repair
-            [] ->
-                {stop, normal, NewState};
-            _ ->
-                MergedRObj = rclref_object:merge(RObjs0 ++ UObjs0),
-                ok = repair(MergedRObj, N, RObjs0 ++ UObjs0),
-                {stop, normal, NewState}
-          end;
-      false ->
-          {keep_state, NewState}
+        true ->
+            case RObjs0 ++ UObjs0 of
+                % When any of the vnodes responded with {ok, RObj}, do not issue read_repair
+                [] ->
+                    {stop, normal, NewState};
+                _ ->
+                    MergedRObj = rclref_object:merge(RObjs0 ++ UObjs0),
+                    ok = repair(MergedRObj, N, RObjs0 ++ UObjs0),
+                    {stop, normal, NewState}
+            end;
+        false ->
+            {keep_state, NewState}
     end;
 % When finalize state timeouts, issue a read_repair
 finalize(state_timeout,
          hard_stop,
-         State = #state{n_val = N, riak_objects = RObjs, undefined_objects = UObjs}) ->
+         State =
+             #state{n_val = N,
+                    riak_objects = RObjs,
+                    undefined_objects = UObjs}) ->
     case RObjs ++ UObjs of
-      [] ->
-          {stop, normal, State};
-      _ ->
-          MergedRObj = rclref_object:merge(RObjs ++ UObjs),
-          ok = repair(MergedRObj, N, RObjs ++ UObjs),
-          {stop, normal, State}
+        [] ->
+            {stop, normal, State};
+        _ ->
+            MergedRObj = rclref_object:merge(RObjs ++ UObjs),
+            ok = repair(MergedRObj, N, RObjs ++ UObjs),
+            {stop, normal, State}
     end;
 finalize(_EventType, _EventContent, State = #state{}) ->
     {keep_state, State}.
@@ -254,17 +257,16 @@ repair(RObj, N, RObjs) ->
          || X <- RObjs, Key =:= rclref_object:key(X), Content =:= rclref_object:content(X)],
     DocIdx = riak_core_util:chash_key({Key, undefined}),
     PrefList = riak_core_apl:get_primary_apl(DocIdx, N, rclref),
-    lists:foreach(fun ({IndexNode, _}) ->
-                          case lists:member(IndexNode, OkNodesIndexes) of
-                            false ->
-                                logger:info("Sending repair RObj: ~p to IndexNode: ~p",
-                                            [RObj, IndexNode]),
-                                riak_core_vnode_master:command(IndexNode,
-                                                               {repair_request, RObj},
-                                                               rclref_vnode_master);
-                            _ ->
-                                ok
-                          end
+    lists:foreach(fun({IndexNode, _}) ->
+                     case lists:member(IndexNode, OkNodesIndexes) of
+                         false ->
+                             logger:info("Sending repair RObj: ~p to IndexNode: ~p",
+                                         [RObj, IndexNode]),
+                             riak_core_vnode_master:command(IndexNode,
+                                                            {repair_request, RObj},
+                                                            rclref_vnode_master);
+                         _ -> ok
+                     end
                   end,
                   PrefList),
     ok.

@@ -30,4 +30,5 @@ init([]) ->
 % Internal Functions
 -spec reqid() -> non_neg_integer().
 reqid() ->
-    erlang:phash2(erlang:monotonic_time()).
+    erlang:phash2(
+        erlang:monotonic_time()).

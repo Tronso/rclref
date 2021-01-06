@@ -60,10 +60,10 @@ init([ReqId, ClientPid, ClientNode, RObj, Options]) ->
                n_val = N,
                w_val = W},
 
-    lists:foreach(fun ({IndexNode, _}) ->
-                          riak_core_vnode_master:command(IndexNode,
-                                                         {kv_put_request, RObj, self(), node()},
-                                                         rclref_vnode_master)
+    lists:foreach(fun({IndexNode, _}) ->
+                     riak_core_vnode_master:command(IndexNode,
+                                                    {kv_put_request, RObj, self(), node()},
+                                                    rclref_vnode_master)
                   end,
                   PrefList),
     {ok, waiting, State, [{state_timeout, TimeoutPut, hard_stop}]}.
@@ -96,11 +96,11 @@ waiting(cast,
 
     % When more than or equal to W vnodes responded with {ok, RObj}, return W RObjs to client
     case NumOk >= W of
-      true ->
-          ClientPid ! {ReqId, {ok, RObjs}},
-          {stop, normal, NewState};
-      false ->
-          {keep_state, NewState}
+        true ->
+            ClientPid ! {ReqId, {ok, RObjs}},
+            {stop, normal, NewState};
+        false ->
+            {keep_state, NewState}
     end;
 % When a vnode return {error, VnodeError}
 waiting(cast,
@@ -120,11 +120,11 @@ waiting(cast,
 
     % When more than (N-W) vnodes responded with {error, VnodeError}, return all RObjs and VnodeErrors it has received to client
     case NumVnodeError > N - W of
-      true ->
-          ClientPid ! {ReqId, {{ok, RObjs0}, {error, VnodeErrors}}},
-          {stop, normal, NewState};
-      false ->
-          {keep_state, NewState}
+        true ->
+            ClientPid ! {ReqId, {{ok, RObjs0}, {error, VnodeErrors}}},
+            {stop, normal, NewState};
+        false ->
+            {keep_state, NewState}
     end;
 waiting(state_timeout,
         hard_stop,

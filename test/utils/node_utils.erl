@@ -7,9 +7,7 @@
 -spec set_up_nodes([atom()], [non_neg_integer()], [tuple()]) -> [node()].
 set_up_nodes(Names, Ports, Config) ->
     NodesWithStatus =
-        node_utils:pmap(fun ({Name, Port}) ->
-                                node_utils:start_node(Name, Port, Config)
-                        end,
+        node_utils:pmap(fun({Name, Port}) -> node_utils:start_node(Name, Port, Config) end,
                         lists:zip(Names, Ports)),
     Nodes = [Node || {connect, Node} <- NodesWithStatus],
     ok = riak_utils:wait_until_ring_converged(Nodes),
@@ -22,7 +20,9 @@ start_node(Name, Port, Config) ->
     CodePath = lists:filter(fun filelib:is_dir/1, code:get_path()),
     {ok, Cwd} = file:get_cwd(),
     % RclrefFolder is .../rclref/_build/test
-    _RclrefFolder = filename:dirname(filename:dirname(Cwd)),
+    _RclrefFolder =
+        filename:dirname(
+            filename:dirname(Cwd)),
     NodeConfig =
         [{init_timeout, 3000},
          {startup_timeout, 3000},
@@ -30,73 +30,72 @@ start_node(Name, Port, Config) ->
          {startup_functions, [{code, set_path, [CodePath]}]}],
 
     case ct_slave:start(Name, NodeConfig) of
-      {ok, Node} ->
-          % Load application to allow configuring the environment before starting
-          ok = rpc:call(Node, application, load, [riak_core]),
-          ok = rpc:call(Node, application, load, [rclref]),
-          % Get remote working dir of node
-          % NodeWorkingDir is .../rclref/_build/test/logs/ct_run.test@127.0.0.1.2020-00-00_00.00.00
-          {ok, NodeWorkingDir} = rpc:call(Node, file, get_cwd, []),
-          SuiteName = proplists:get_value(module, Config, ''),
-          % Data Dirs
-          ok =
-              rpc:call(Node,
-                       application,
-                       set_env,
-                       [riak_core,
-                        ring_state_dir,
-                        filename:join([NodeWorkingDir, "suites", SuiteName, Node, "data/ring"])]),
-          ok =
-              rpc:call(Node,
-                       application,
-                       set_env,
-                       [riak_core,
-                        platform_data_dir,
-                        filename:join([NodeWorkingDir, "suites", SuiteName, Node, "data"])]),
-          ok =
-              rpc:call(Node,
-                       application,
-                       set_env,
-                       [riak_core,
-                        schema_dirs,
-                        filename:join([NodeWorkingDir, "suites", SuiteName, Node, "data"])]),
+        {ok, Node} ->
+            % Load application to allow configuring the environment before starting
+            ok = rpc:call(Node, application, load, [riak_core]),
+            ok = rpc:call(Node, application, load, [rclref]),
+            % Get remote working dir of node
+            % NodeWorkingDir is .../rclref/_build/test/logs/ct_run.test@127.0.0.1.2020-00-00_00.00.00
+            {ok, NodeWorkingDir} = rpc:call(Node, file, get_cwd, []),
+            SuiteName = proplists:get_value(module, Config, ''),
+            % Data Dirs
+            ok =
+                rpc:call(Node,
+                         application,
+                         set_env,
+                         [riak_core,
+                          ring_state_dir,
+                          filename:join([NodeWorkingDir, "suites", SuiteName, Node, "data/ring"])]),
+            ok =
+                rpc:call(Node,
+                         application,
+                         set_env,
+                         [riak_core,
+                          platform_data_dir,
+                          filename:join([NodeWorkingDir, "suites", SuiteName, Node, "data"])]),
+            ok =
+                rpc:call(Node,
+                         application,
+                         set_env,
+                         [riak_core,
+                          schema_dirs,
+                          filename:join([NodeWorkingDir, "suites", SuiteName, Node, "data"])]),
 
-          % Set ports
-          ok = rpc:call(Node, application, set_env, [riak_core, handoff_port, Port]),
-          ok = rpc:call(Node, application, set_env, [rclref, http_port, Port + 1]),
+            % Set ports
+            ok = rpc:call(Node, application, set_env, [riak_core, handoff_port, Port]),
+            ok = rpc:call(Node, application, set_env, [rclref, http_port, Port + 1]),
 
-          % Logging Configuration
-          LogRoot = filename:join([NodeWorkingDir, "suites", SuiteName, Node, "logs"]),
-          ok = rpc:call(Node, application, set_env, [rclref, logger, log_config(LogRoot)]),
-          rpc:call(Node, logger, set_primary_config, [level, all]),
-          rpc:call(Node, logger, add_handlers, [rclref]),
-          % redirect slave logs to ct_master logs
-          ok = rpc:call(Node, application, set_env, [rclref, ct_master, node()]),
-          ConfLog =
-              #{level => debug,
-                formatter => {logger_formatter, #{single_line => true, max_size => 2048}},
-                config => #{type => standard_io}},
-          _ =
-              rpc:call(Node,
-                       logger,
-                       add_handler,
-                       [rclref_redirect_ct, ct_redirect_handler, ConfLog]),
+            % Logging Configuration
+            LogRoot = filename:join([NodeWorkingDir, "suites", SuiteName, Node, "logs"]),
+            ok = rpc:call(Node, application, set_env, [rclref, logger, log_config(LogRoot)]),
+            rpc:call(Node, logger, set_primary_config, [level, all]),
+            rpc:call(Node, logger, add_handlers, [rclref]),
+            % redirect slave logs to ct_master logs
+            ok = rpc:call(Node, application, set_env, [rclref, ct_master, node()]),
+            ConfLog =
+                #{level => debug,
+                  formatter => {logger_formatter, #{single_line => true, max_size => 2048}},
+                  config => #{type => standard_io}},
+            _ = rpc:call(Node,
+                         logger,
+                         add_handler,
+                         [rclref_redirect_ct, ct_redirect_handler, ConfLog]),
 
-          % Configuration
-          ok = rpc:call(Node, application, set_env, [riak_core, ring_creation_size, 8]),
-          {ok, _} = rpc:call(Node, application, ensure_all_started, [riak_core]),
-          {ok, _} = rpc:call(Node, application, ensure_all_started, [rclref]),
+            % Configuration
+            ok = rpc:call(Node, application, set_env, [riak_core, ring_creation_size, 8]),
+            {ok, _} = rpc:call(Node, application, ensure_all_started, [riak_core]),
+            {ok, _} = rpc:call(Node, application, ensure_all_started, [rclref]),
 
-          ct:pal("Node ~p stated with (handoff) port ~p", [Node, Port]),
-          {connect, Node};
-      {error, already_started, Node} ->
-          ct:log("Node ~p already started, reusing node", [Node]),
-          {ready, Node};
-      {error, Reason, Node} ->
-          ct:pal("Error starting node ~p, reason ~p, will retry", [Node, Reason]),
-          ct_slave:stop(Name),
-          time_utils:wait_until_offline(Node),
-          start_node(Name, Port, Config)
+            ct:pal("Node ~p stated with (handoff) port ~p", [Node, Port]),
+            {connect, Node};
+        {error, already_started, Node} ->
+            ct:log("Node ~p already started, reusing node", [Node]),
+            {ready, Node};
+        {error, Reason, Node} ->
+            ct:pal("Error starting node ~p, reason ~p, will retry", [Node, Reason]),
+            ct_slave:stop(Name),
+            time_utils:wait_until_offline(Node),
+            start_node(Name, Port, Config)
     end.
 
 -spec kill_and_restart_nodes([node()], [non_neg_integer()], [tuple()]) -> [node()].
@@ -107,24 +106,22 @@ kill_and_restart_nodes(NodeList, Ports, Config) ->
 
 -spec kill_nodes([node()]) -> [node()].
 kill_nodes(NodeList) ->
-    lists:map(fun (Node) ->
-                      case ct_slave:stop(get_node_name(Node)) of
-                        {ok, Name} ->
-                            Name;
-                        {error, not_started, Name} ->
-                            Name
-                      end
+    lists:map(fun(Node) ->
+                 case ct_slave:stop(get_node_name(Node)) of
+                     {ok, Name} -> Name;
+                     {error, not_started, Name} -> Name
+                 end
               end,
               NodeList).
 
 -spec brutal_kill_nodes([node()]) -> [node()].
 brutal_kill_nodes(NodeList) ->
-    lists:map(fun (Node) ->
-                      ct:pal("Killing node ~p", [Node]),
-                      OSPidToKill = rpc:call(Node, os, getpid, []),
-                      ct_slave:stop(get_node_name(Node)),
-                      rpc:cast(Node, os, cmd, [io_lib:format("kill -15 ~s", [OSPidToKill])]),
-                      Node
+    lists:map(fun(Node) ->
+                 ct:pal("Killing node ~p", [Node]),
+                 OSPidToKill = rpc:call(Node, os, getpid, []),
+                 ct_slave:stop(get_node_name(Node)),
+                 rpc:cast(Node, os, cmd, [io_lib:format("kill -15 ~s", [OSPidToKill])]),
+                 Node
               end,
               NodeList).
 
@@ -138,21 +135,20 @@ get_node_name(NodeAtom) ->
 -spec pmap(fun(), list()) -> list().
 pmap(F, L) ->
     Parent = self(),
-    lists:foldl(fun (X, N) ->
-                        spawn_link(fun () ->
-                                           Parent ! {pmap, N, F(X)}
-                                   end),
-                        N + 1
+    lists:foldl(fun(X, N) ->
+                   spawn_link(fun() -> Parent ! {pmap, N, F(X)} end),
+                   N + 1
                 end,
                 0,
                 L),
-    L2 =
-        [receive
-           {pmap, N, R} ->
-               {N, R}
-         end
-         || _ <- L],
-    {_, L3} = lists:unzip(lists:keysort(1, L2)),
+    L2 = [receive
+              {pmap, N, R} ->
+                  {N, R}
+          end
+          || _ <- L],
+    {_, L3} =
+        lists:unzip(
+            lists:keysort(1, L2)),
     L3.
 
 log_config(LogDir) ->

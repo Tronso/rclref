@@ -41,9 +41,7 @@
 %% take a node as single argument.
 -spec wait_until(node(), fun()) -> true | {fail, any()}.
 wait_until(Node, Fun) when is_atom(Node), is_function(Fun) ->
-    wait_until(fun () ->
-                       Fun(Node)
-               end).
+    wait_until(fun() -> Fun(Node) end).
 
 %% @doc Utility function used to construct test predicates. Retries the
 %%      function 'Fun' until it returns 'true', or until the maximum
@@ -67,30 +65,24 @@ wait_until(Fun, Retry, Delay) when Retry > 0 ->
 wait_until_result(Fun, ExpectedResult, Retry, Delay) when Retry > 0 ->
     ActualResult = Fun(),
     case ActualResult of
-      ExpectedResult ->
-          ok;
-      _ when Retry == 1 ->
-          {fail, ActualResult};
-      _ ->
-          timer:sleep(Delay),
-          wait_until_result(Fun, ExpectedResult, Retry - 1, Delay)
+        ExpectedResult ->
+            ok;
+        _ when Retry == 1 ->
+            {fail, ActualResult};
+        _ ->
+            timer:sleep(Delay),
+            wait_until_result(Fun, ExpectedResult, Retry - 1, Delay)
     end.
 
 %% @doc Waits until no connection to the target node can be established anymore.
 -spec wait_until_offline(node()) -> any().
 wait_until_offline(Node) ->
-    wait_until(fun () ->
-                       pang == net_adm:ping(Node)
-               end,
-               retries(),
-               retry_delay()).
+    wait_until(fun() -> pang == net_adm:ping(Node) end, retries(), retry_delay()).
 
 %% @doc Waits until node1 can or connect to node2
 -spec wait_until_connection(node(), node(), pang | pong) -> any().
 wait_until_connection(Node1, Node2, Expected) ->
-    wait_until(fun () ->
-                       Expected == rpc:call(Node1, net_adm, ping, [Node2])
-               end,
+    wait_until(fun() -> Expected == rpc:call(Node1, net_adm, ping, [Node2]) end,
                retries(),
                retry_delay()).
 
@@ -108,9 +100,9 @@ wait_until_connected(Node1, Node2) ->
 -spec wait_until_registered(node(), any()) -> any().
 wait_until_registered(Node, Name) ->
     IsNameRegisteredMember =
-        fun () ->
-                Registered = rpc:call(Node, erlang, registered, []),
-                lists:member(Name, Registered)
+        fun() ->
+           Registered = rpc:call(Node, erlang, registered, []),
+           lists:member(Name, Registered)
         end,
     Delay = rt_retry_delay(),
     Retry = 360000 div Delay,
@@ -120,19 +112,13 @@ wait_until_registered(Node, Name) ->
 -spec wait_until_nodes_agree_about_ownership([node()]) -> any().
 wait_until_nodes_agree_about_ownership(Nodes) ->
     Results = [wait_until_owners_according_to(Node, Nodes) || Node <- Nodes],
-    ?assert(lists:all(fun (X) ->
-                              ok =:= X
-                      end,
-                      Results)).
+    ?assert(lists:all(fun(X) -> ok =:= X end, Results)).
 
 %% @doc Waits until ring owners of the given node match the expected ring owners
 -spec wait_until_owners_according_to(node(), [node()]) -> ok.
 wait_until_owners_according_to(Node, NodeRingOwners) ->
     ExpectedOwners = lists:usort(NodeRingOwners),
-    AreNodesOwners =
-        fun (N) ->
-                riak_utils:owners_according_to(N) =:= ExpectedOwners
-        end,
+    AreNodesOwners = fun(N) -> riak_utils:owners_according_to(N) =:= ExpectedOwners end,
     ?assertEqual(ok, wait_until(Node, AreNodesOwners)),
     ok.
 

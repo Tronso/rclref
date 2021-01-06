@@ -18,12 +18,12 @@ stop(_State = #state{table_id = TableId}) ->
 
 get(Key, State = #state{table_id = TableId}) ->
     case ets:lookup(TableId, Key) of
-      [] ->
-          {ok, not_found, State};
-      [{_, Value}] ->
-          {ok, Value, State};
-      Reason ->
-          {error, Reason, State}
+        [] ->
+            {ok, not_found, State};
+        [{_, Value}] ->
+            {ok, Value, State};
+        Reason ->
+            {error, Reason, State}
     end.
 
 put(Key, Value, State = #state{table_id = TableId}) ->
@@ -45,20 +45,14 @@ fold_keys(Fun, Acc, State) ->
     fold_keys(Fun, Acc, [], State).
 
 fold_keys(Fun, Acc0, _Options, _State = #state{table_id = TableId}) ->
-    FoldKeysFun =
-        fun ({K, _}, A) ->
-                Fun(K, A)
-        end,
+    FoldKeysFun = fun({K, _}, A) -> Fun(K, A) end,
     ets:foldl(FoldKeysFun, Acc0, TableId).
 
 fold_objects(Fun, Acc, State) ->
     fold_objects(Fun, Acc, [], State).
 
 fold_objects(Fun, Acc0, _Options, _State = #state{table_id = TableId}) ->
-    FoldObjectsFun =
-        fun ({K, V}, A) ->
-                Fun(K, V, A)
-        end,
+    FoldObjectsFun = fun({K, V}, A) -> Fun(K, V, A) end,
     ets:foldl(FoldObjectsFun, Acc0, TableId).
 
 status(_State = #state{table_id = TableId}) ->

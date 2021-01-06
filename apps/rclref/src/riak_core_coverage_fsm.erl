@@ -62,7 +62,7 @@
 %%      </ul>
 -module(riak_core_coverage_fsm).
 
--include_lib("riak_core_lite/include/riak_core_vnode.hrl").
+-include_lib("riak_core/include/riak_core_vnode.hrl").
 
 -behaviour(gen_fsm_compat).
 
@@ -193,10 +193,9 @@ init({test, Args, StateProps}) ->
     %% Then tweak the state record with entries provided by StateProps
     Fields = record_info(fields, state),
     FieldPos = lists:zip(Fields, lists:seq(2, length(Fields) + 1)),
-    F =
-        fun ({Field, Value}, State0) ->
-                Pos = proplists:get_value(Field, FieldPos),
-                setelement(Pos, State0, Value)
+    F = fun({Field, Value}, State0) ->
+           Pos = proplists:get_value(Field, FieldPos),
+           setelement(Pos, State0, Value)
         end,
     TestStateData = lists:foldl(F, StateData, StateProps),
 
@@ -230,18 +229,18 @@ initialize(timeout,
     CoveragePlan =
         riak_core_coverage_plan:create_plan(VNodeSelector, NVal, PVC, ReqId, NodeCheckService),
     case CoveragePlan of
-      {error, Reason} ->
-          Mod:finish({error, Reason}, ModState);
-      {CoverageVNodes, FilterVNodes} ->
-          {ok, UpModState} = PlanFun(CoverageVNodes, ModState),
-          Sender = {fsm, ReqId, self()},
-          riak_core_vnode_master:coverage(Request,
-                                          CoverageVNodes,
-                                          FilterVNodes,
-                                          Sender,
-                                          VNodeMaster),
-          StateData = StateData0#state{coverage_vnodes = CoverageVNodes, mod_state = UpModState},
-          {next_state, waiting_results, StateData, Timeout}
+        {error, Reason} ->
+            Mod:finish({error, Reason}, ModState);
+        {CoverageVNodes, FilterVNodes} ->
+            {ok, UpModState} = PlanFun(CoverageVNodes, ModState),
+            Sender = {fsm, ReqId, self()},
+            riak_core_vnode_master:coverage(Request,
+                                            CoverageVNodes,
+                                            FilterVNodes,
+                                            Sender,
+                                            VNodeMaster),
+            StateData = StateData0#state{coverage_vnodes = CoverageVNodes, mod_state = UpModState},
+            {next_state, waiting_results, StateData, Timeout}
     end.
 
 %% @private
@@ -254,21 +253,21 @@ waiting_results({{ReqId, VNode}, Results},
                            timeout = Timeout,
                            process_fun = ProcessFun}) ->
     case ProcessFun(VNode, Results, ModState) of
-      {ok, UpdModState} ->
-          UpdStateData = StateData#state{mod_state = UpdModState},
-          {next_state, waiting_results, UpdStateData, Timeout};
-      {done, UpdModState} ->
-          UpdatedVNodes = lists:delete(VNode, CoverageVNodes),
-          case UpdatedVNodes of
-            [] ->
-                Mod:finish(clean, UpdModState);
-            _ ->
-                UpdStateData =
-                    StateData#state{coverage_vnodes = UpdatedVNodes, mod_state = UpdModState},
-                {next_state, waiting_results, UpdStateData, Timeout}
-          end;
-      Error ->
-          Mod:finish(Error, ModState)
+        {ok, UpdModState} ->
+            UpdStateData = StateData#state{mod_state = UpdModState},
+            {next_state, waiting_results, UpdStateData, Timeout};
+        {done, UpdModState} ->
+            UpdatedVNodes = lists:delete(VNode, CoverageVNodes),
+            case UpdatedVNodes of
+                [] ->
+                    Mod:finish(clean, UpdModState);
+                _ ->
+                    UpdStateData =
+                        StateData#state{coverage_vnodes = UpdatedVNodes, mod_state = UpdModState},
+                    {next_state, waiting_results, UpdStateData, Timeout}
+            end;
+        Error ->
+            Mod:finish(Error, ModState)
     end;
 waiting_results({timeout, _, _}, #state{mod = Mod, mod_state = ModState}) ->
     Mod:finish({error, timeout}, ModState);
@@ -306,26 +305,18 @@ code_change(_OldVsn, StateName, State, _Extra) ->
 
 plan_callback(Mod, Exports) ->
     case exports(plan, Exports) of
-      true ->
-          fun (CoverageVNodes, ModState) ->
-                  Mod:plan(CoverageVNodes, ModState)
-          end;
-      _ ->
-          fun (_, ModState) ->
-                  {ok, ModState}
-          end
+        true ->
+            fun(CoverageVNodes, ModState) -> Mod:plan(CoverageVNodes, ModState) end;
+        _ ->
+            fun(_, ModState) -> {ok, ModState} end
     end.
 
 process_results_callback(Mod, Exports) ->
     case exports_arity(process_results, 3, Exports) of
-      true ->
-          fun (VNode, Results, ModState) ->
-                  Mod:process_results(VNode, Results, ModState)
-          end;
-      false ->
-          fun (_VNode, Results, ModState) ->
-                  Mod:process_results(Results, ModState)
-          end
+        true ->
+            fun(VNode, Results, ModState) -> Mod:process_results(VNode, Results, ModState) end;
+        false ->
+            fun(_VNode, Results, ModState) -> Mod:process_results(Results, ModState) end
     end.
 
 exports(Function, Exports) ->

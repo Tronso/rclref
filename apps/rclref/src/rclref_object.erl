@@ -61,12 +61,7 @@ new_vclock() ->
 
 -spec increment_vclock(node(), vclock()) -> vclock().
 increment_vclock(Node, VClock) ->
-    vectorclock:update_with(Node,
-                            fun (X) ->
-                                    X + 1
-                            end,
-                            1,
-                            VClock).
+    vectorclock:update_with(Node, fun(X) -> X + 1 end, 1, VClock).
 
 -spec new_content(value(), vclock()) -> #r_content{}.
 new_content(Value, VClock) ->
@@ -74,7 +69,9 @@ new_content(Value, VClock) ->
 
 -spec new_error(term(), non_neg_integer(), node()) -> vnode_error().
 new_error(Reason, Partition, Node) ->
-    #vnode_error{reason = Reason, partition = Partition, node = Node}.
+    #vnode_error{reason = Reason,
+                 partition = Partition,
+                 node = Node}.
 
 -spec new(key(), value()) -> riak_object().
 new(Key, Value) ->
@@ -82,7 +79,10 @@ new(Key, Value) ->
 
 -spec new(key(), #r_content{}, non_neg_integer(), node()) -> riak_object().
 new(Key, Content, Partition, Node) ->
-    #r_object{key = Key, r_content = Content, partition = Partition, node = Node}.
+    #r_object{key = Key,
+              r_content = Content,
+              partition = Partition,
+              node = Node}.
 
 -spec merge([riak_object()]) -> riak_object().
 merge([RObj]) ->
@@ -92,9 +92,9 @@ merge([RObj0, RObj1 | RObjs]) ->
     VClock1 = vclock(RObj1),
     NewRObj =
         case vectorclock:le(VClock0, VClock1) of
-          true ->
-              RObj1;
-          false ->
-              RObj0
+            true ->
+                RObj1;
+            false ->
+                RObj0
         end,
     merge([NewRObj] ++ RObjs).
