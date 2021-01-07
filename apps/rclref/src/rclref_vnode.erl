@@ -65,7 +65,7 @@ handle_command({kv_put_request, RObj, Pid, Node},
                     NewRObj = rclref_object:new(Key, NewContent, Partition, node()),
                     rclref_put_statem:result_of_put(Pid, {ok, NewRObj}),
                     State1 = State0#state{modstate = ModState2},
-                    rclref_stats:add_key(node()),
+                    rclref_stats:add_keys(node(), 1),
                     {noreply, State1};
                 {error, Reason, ModState2} ->
                     logger:error("Failed to put kv with key: ~p, content: ~p for partition: ~p, "
@@ -188,7 +188,9 @@ handle_handoff_command(#riak_core_fold_req_v2{foldfun = FoldFun, acc0 = Acc0},
                        State = #state{mod = Mod, modstate = ModState}) ->
     % FoldFun
     % -type fold_objects_fun() :: fun((term(), term(), any()) -> any() | no_return()).
+    {size, Keys} = lists:keyfind(size, 1, Mod:status(ModState)),
     Acc = Mod:fold_objects(FoldFun, Acc0, [], ModState),
+    rclref_stats:remove_keys(node(), Keys),
     {reply, Acc, State};
 handle_handoff_command(Message, _Sender, State) ->
     logger:warning("handoff command ~p, ignoring", [Message]),
@@ -213,8 +215,14 @@ handle_handoff_data(BinData,
                                modstate = ModState0}) ->
     {Key, Content} = binary_to_term(BinData),
     logger:info("handoff data received ~p: ~p", [Partition, Key]),
-    {ok, ModState1} = Mod:put(Key, Content, ModState0),
-    State1 = State0#state{modstate = ModState1},
+    %% for stats only
+    case Mod:get(Key, ModState0) of
+        {ok, not_found, ModState1} ->
+            rclref_stats:add_keys(node(), 1);
+        _ -> ModState1 = ModState0
+    end,
+    {ok, ModState2} = Mod:put(Key, Content, ModState1),
+    State1 = State0#state{modstate = ModState2},
     {reply, ok, State1}.
 
 encode_handoff_item(Key, Content) ->

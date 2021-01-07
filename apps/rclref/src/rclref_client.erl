@@ -96,5 +96,7 @@ get_stats(Node) ->
 -spec get_all_stats() -> [rclref_stats:stats()].
 get_all_stats() ->
     Nodes = rclref_cluster_manager:ring_members(node()),
-    lists:filter(fun(E) -> E =/= {error, no_stats} end,
-                 lists:map(fun(Node) -> get_stats(Node) end, Nodes)).
+    Stats = lists:filter(fun(E) -> E =/= {error, no_stats} end,
+                 lists:map(fun(Node) -> get_stats(Node) end, Nodes)),
+    LoadBalancing = rclref_stats:compute_load_balancing(Stats),
+    {Stats, LoadBalancing}.
